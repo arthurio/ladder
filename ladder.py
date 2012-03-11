@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import sys, time, pickle, random
-from threading import Thread
+import sys, pickle, random
+from threading import Thread, Lock
 
 usage_message = 'usage : ladder.py <first word> <second word>'
 
@@ -24,15 +24,30 @@ def hamming_distance(s1, s2):
 def create_matrix(words):
 
     matrix = {}
-    for w1 in words:
-        matrix[w1] = []
-        for w2 in words:
-            if hamming_distance(w1, w2) == 1:
-                matrix[w1].append(w2)
 
+    for i, w1 in enumerate(words):
+        print '%2f%%' % ((float(i) / len(words)) * 100)
+        matrix[w1] = []
+        for j in range(i, len(words)):
+            if hamming_distance(w1, words[j]) == 1:
+                matrix[w1].append(words[j])
+                if words[j] not in matrix:
+                    matrix[words[j]] = []
+                matrix[words[j]].append(w1)
+
+    print '100%'
     return matrix
 
+
+def dump_matrix(size):
+    pickle.dump(create_matrix(get_words(size)), open('matrix_%s.pkl' % size, 'wb'))
+
+
 class Searcher(Thread):
+
+    lock = Lock()
+    trouve = False
+
     def __init__(self, start_word, end_word, words):
         self.words = words
         self.start_word = start_word
@@ -42,23 +57,53 @@ class Searcher(Thread):
         self.start()
 
     def search(self):
-        print "search"
         while True:
-            self.path.append(self.start_word)
-            if self.end_word in words[self.start_word]:
-                self.path.append(self.end_word)
-                print "TROUVE"
-                print self.path
-                sys.exit(1)
-            else:
-                next_word = random.choice(words[self.start_word])
-                self.start_word = next_word
+            with Searcher.lock:
+                if Searcher.trouve:
+                    break
 
-    def is_better(self):
-        return True
+            self.path.append(self.start_word)
+            if self.end_word in self.words[self.start_word]:
+                self.path.append(self.end_word)
+                with Searcher.lock:
+                    Searcher.trouve = True
+                    print self.path
+                    break
+            else:
+                w1 = random.choice(self.words[self.start_word])
+                w2 = random.choice(self.words[self.start_word])
+                self.start_word = self.best_word(w1, w2)
+                    
+    def best_word(self, w1, w2):
+        if hamming_distance(w1, self.end_word) < hamming_distance(w2, self.end_word):
+            return w1
+        else:
+            return w2
+
+    def hamming_distance(s1, s2):
+        return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
+
         
-words = pickle.load(open('matrix.pkl','r'))
+words_matrix = None
+
 #words = get_words(len(first_word))
+
+def main(first_word, second_word):
+    words_matrix = pickle.load(open('matrix_%s.pkl' % len(first_word), 'r'))
+
+    searcher_count = 5
+    threads = []
+
+    if check_words_exist(words_matrix, first_word, second_word):
+        for i in range(searcher_count):
+            threads.append(Searcher(first_word, second_word, words_matrix))
+            threads.append(Searcher(second_word, first_word, words_matrix))
+
+        for t in threads:
+            t.join()
+    else:
+        print 'One of the words doesn\'t exist'
+        sys.exit(1)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -68,18 +113,6 @@ if __name__ == '__main__':
         print usage_message.join(': both words should have the same length')
         sys.exit(1)
 
-    searcher_count = 5
-    first_word = sys.argv[1]
-    second_word = sys.argv[2]
-    threads = []
-    
-    if check_words_exist(words, first_word, second_word):
-        for i in range(searcher_count):
-            threads.append(Searcher(first_word, second_word, words))
-            threads.append(Searcher(second_word, first_word, words))
+    import profile
 
-        for t in threads:
-            t.join()
-    else:
-        print 'One of the words doesn\'t exist'
-        sys.exit(1)
+    profile.run('main("%s", "%s")' % (sys.argv[1], sys.argv[2]))
