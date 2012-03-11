@@ -58,11 +58,12 @@ def dump_matrix(size):
 
 class Searcher(Thread):
 
-    lock = Lock()
-    trouve = False
+    lock_found = Lock()
+    lock_matrix = Lock()
+    found = False
+    matrix = {}
 
-    def __init__(self, start_word, end_word, words):
-        self.words = words
+    def __init__(self, start_word, end_word):
         self.start_word = start_word
         self.end_word = end_word
         self.path = []
@@ -71,20 +72,27 @@ class Searcher(Thread):
 
     def search(self):
         while True:
-            with Searcher.lock:
-                if Searcher.trouve:
+            with Searcher.lock_found:
+                if Searcher.found:
                     break
 
             self.path.append(self.start_word)
-            if self.end_word in self.words[self.start_word]:
+            if self.start_word in Searcher.matrix and self.end_word in Searcher.matrix[self.start_word]:
                 self.path.append(self.end_word)
-                with Searcher.lock:
-                    Searcher.trouve = True
+                with Searcher.lock_found:
+                    Searcher.found = True
                     print self.path
                     break
             else:
-                w1 = random.choice(self.words[self.start_word])
-                w2 = random.choice(self.words[self.start_word])
+                with Searcher.lock_matrix:
+                    if not self.start_word in Searcher.matrix:
+                        Searcher.matrix[self.start_word] = []
+                        for w in Searcher.words:
+                            if hamming_distance(w, self.start_word) == 1:
+                                Searcher.matrix[self.start_word].append(w)
+
+                w1 = random.choice(Searcher.matrix[self.start_word])
+                w2 = random.choice(Searcher.matrix[self.start_word])
                 self.start_word = self.best_word(w1, w2)
                     
     def best_word(self, w1, w2):
@@ -97,19 +105,15 @@ class Searcher(Thread):
         return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
         
-words_matrix = None
-
-#words = get_words(len(first_word))
-
 def main(first_word, second_word):
 
     searcher_count = 5
     threads = []
 
-    if check_words_exist(words_matrix, first_word, second_word):
+    if check_words_exist(Searcher.words, first_word, second_word):
         for i in range(searcher_count):
-            threads.append(Searcher(first_word, second_word, words_matrix))
-            threads.append(Searcher(second_word, first_word, words_matrix))
+            threads.append(Searcher(first_word, second_word))
+            threads.append(Searcher(second_word, first_word))
 
         for t in threads:
             t.join()
@@ -125,8 +129,8 @@ if __name__ == '__main__':
         print usage_message.join(': both words should have the same length')
         sys.exit(1)
 
-    words_matrix = pickle.load(open('matrix_%s.pkl' % len(sys.argv[1]), 'r'))
-
+    Searcher.words = get_words(len(sys.argv[1]))
+    
     import profile
 
     profile.run('main("%s", "%s")' % (sys.argv[1], sys.argv[2]))
