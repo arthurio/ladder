@@ -4,13 +4,6 @@ import sys
 
 usage_message = 'usage : ladder.py <first word> <second word>'
 
-if len(sys.argv) != 3:
-    print usage_message
-    sys.exit(1)
-elif len(sys.argv[1]) != len(sys.argv[2]):
-    print usage_message.join(': both words should have the same length')
-    sys.exit(1)
-
 def get_words(length):    # Create a set of the words with the same size
     filename = "words" # English list of words
     words = []
@@ -40,7 +33,19 @@ def dijkstra():
 
     pass
 
+def hamming_distance(s1, s2):
+    return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
+def are_close(s1, s2):
+    if hamming_distance(s1, s2) == 1:
+        return True
+    return False
+    
+def mutate(s1, words):
+    s2 = s1
+    if s2 in words:
+        return s2
+    
 def main(first_word, second_word):
     words = get_words(len(first_word))
     print len(words)
@@ -51,5 +56,12 @@ def main(first_word, second_word):
     #    print 'One of the words doesn\'t exist'
     #    sys.exit(1)
 
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print usage_message
+        sys.exit(1)
+    elif len(sys.argv[1]) != len(sys.argv[2]):
+        print usage_message.join(': both words should have the same length')
+        sys.exit(1)
 
-main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2])
