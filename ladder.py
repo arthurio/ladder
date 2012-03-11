@@ -1,9 +1,21 @@
 #!/usr/bin/python
 
-import sys, pickle, random
+import sys, pickle, random, math
 from threading import Thread, Lock
 
 usage_message = 'usage : ladder.py <first word> <second word>'
+
+def progress(width, percent):
+    marks = math.floor(width * (percent / 100.0))
+    spaces = math.floor(width - marks)
+     
+    loader = '[' + ('=' * int(marks)) + (' ' * int(spaces)) + ']'
+       
+    sys.stdout.write("%s %d%%\r" % (loader, percent))
+    if percent >= 100:
+        sys.stdout.write("\n")
+    sys.stdout.flush()
+
 
 def get_words(length):    # Create a set of the words with the same size
     filename = "words" # English list of words
@@ -26,7 +38,7 @@ def create_matrix(words):
     matrix = {}
 
     for i, w1 in enumerate(words):
-        print '%.2f%%' % ((float(i) / len(words)) * 100)
+        progress(len(words), float(i))
         if w1 not in matrix:
             matrix[w1] = []
         for j in range(i + 1, len(words)):
@@ -90,7 +102,6 @@ words_matrix = None
 #words = get_words(len(first_word))
 
 def main(first_word, second_word):
-    words_matrix = pickle.load(open('matrix_%s.pkl' % len(first_word), 'r'))
 
     searcher_count = 5
     threads = []
@@ -113,6 +124,8 @@ if __name__ == '__main__':
     elif len(sys.argv[1]) != len(sys.argv[2]):
         print usage_message.join(': both words should have the same length')
         sys.exit(1)
+
+    words_matrix = pickle.load(open('matrix_%s.pkl' % len(sys.argv[1]), 'r'))
 
     import profile
 
