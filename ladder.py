@@ -26,7 +26,7 @@ def create_matrix(words):
     matrix = {}
 
     for i, w1 in enumerate(words):
-        print '%2f%%' % ((float(i) / len(words)) * 100)
+        print '%.2f%%' % ((float(i) / len(words)) * 100)
         matrix[w1] = []
         for j in range(i, len(words)):
             if hamming_distance(w1, words[j]) == 1:
