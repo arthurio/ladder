@@ -38,7 +38,7 @@ def create_matrix(words):
     matrix = {}
 
     for i, w1 in enumerate(words):
-        progress(len(words), float(i))
+        progress(100, (float(i) / len(words)) * 100)
         if w1 not in matrix:
             matrix[w1] = []
         for j in range(i + 1, len(words)):
