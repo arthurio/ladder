@@ -158,8 +158,6 @@ class Searcher(Thread):
                             thread.exit()
                         # Set this thread to stopped
                         else:
-                            print 'One thread dead'
-                            print self.path
                             Searcher.INTERRUPT += 1
                             break
 
